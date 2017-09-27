@@ -9,9 +9,83 @@ struct MatrixHeader
     columns::Int32
 end
 
+struct TechIndexEntry
+    process_id::String
+    process_name::String
+    process_type::String
+    process_location::String
+    flow_id::String
+    flow_name::String
+    flow_type::String
+    flow_location::String
+    flow_property_id::String
+    flow_property_name::String
+    unit_id::String
+    unit_name::String
+end
+
+struct EnviIndexEntry
+    flow_id::String
+    flow_name::String
+    flow_type::String
+    flow_location::String
+    flow_property_id::String
+    flow_property_name::String
+    unit_id::String
+    unit_name::String
+end
+
+function read_tech_index(path::String)::Vector{TechIndexEntry}
+    stream = open(path)
+    records = readdlm(stream, ',', String)
+    rows, columns = size(records)
+    entries = Vector{TechIndexEntry}(rows - 1)
+    for row = 2:rows
+        record = records[row, :]
+        i = parse(Int, record[1]) + 1
+        entries[i] = TechIndexEntry(
+            record[2],
+            record[3],
+            record[4],
+            record[5],
+            record[6],
+            record[7],
+            record[8],
+            record[9],
+            record[10],
+            record[11],
+            record[12],
+            record[13])
+    end
+    close(stream)
+    return entries
+end
+
+function read_envi_index(path::String)::Vector{EnviIndexEntry}
+    stream = open(path)
+    records = readdlm(stream, ',', String)
+    rows, columns = size(records)
+    entries = Vector{EnviIndexEntry}(rows - 1)
+    for row = 2:rows
+        record = records[row, :]
+        i = parse(Int, record[1]) + 1
+        entries[i] = EnviIndexEntry(
+            record[2],
+            record[3],
+            record[4],
+            record[5],
+            record[6],
+            record[7],
+            record[8],
+            record[9])
+    end
+    close(stream)
+    return entries
+end
+
 function read_matrix(path::String)::Array{Float64,2}
     stream = open(path)
-    h = read_header(stream)
+    h = read_matrix_header(stream)
     M = Array{Float64,2}(h.rows, h.columns)
     for col = 1:h.columns
         M[:, col] = read(stream, Float64, h.rows)
@@ -20,7 +94,7 @@ function read_matrix(path::String)::Array{Float64,2}
     return M
 end
 
-function read_header(stream::IOStream)::MatrixHeader
+function read_matrix_header(stream::IOStream)::MatrixHeader
     h = MatrixHeader(
         read(stream, Int32),
         read(stream, Int32),
@@ -34,7 +108,7 @@ end
 
 function read_column(path::String, column::Int64)::Array{Float64,1}
     stream = open(path)
-    h = read_header(stream)
+    h = read_matrix_header(stream)
     offset = (column - 1) * h.rows * 8
     skip(stream, offset)
     v = read(stream, Float64, h.rows)
